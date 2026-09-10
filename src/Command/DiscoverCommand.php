@@ -6,6 +6,7 @@ namespace BitrixIdeHelper\Command;
 
 use BitrixIdeHelper\ModuleLocator;
 use BitrixIdeHelper\SourceScanner;
+use PhpParser\Error;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -33,7 +34,7 @@ final class DiscoverCommand extends Command
         foreach ($this->locator->locate((string) $input->getArgument('root')) as $module) {
             $symbols = [];
             foreach ($this->scanner->files($module) as $file) {
-                foreach ($this->scanner->symbols($file) as $symbol) {
+                foreach ($this->scanner->symbols($file, $this->parseErrorReporter($output)) as $symbol) {
                     $symbols[] = ['name' => $symbol->name, 'type' => $symbol->type, 'file' => $symbol->file];
                 }
             }
@@ -42,5 +43,19 @@ final class DiscoverCommand extends Command
 
         $output->writeln((string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
         return Command::SUCCESS;
+    }
+
+    /** @return callable(string, Error): void */
+    private function parseErrorReporter(OutputInterface $output): callable
+    {
+        return static function (string $file, Error $error) use ($output): void {
+            $message = sprintf('<comment>Skipping %s: %s</comment>', $file, $error->getMessage());
+            if ($output instanceof \Symfony\Component\Console\Output\ConsoleOutputInterface) {
+                $output->getErrorOutput()->writeln($message);
+                return;
+            }
+
+            $output->writeln($message);
+        };
     }
 }

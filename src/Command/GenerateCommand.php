@@ -8,6 +8,7 @@ use BitrixIdeHelper\Module;
 use BitrixIdeHelper\ModuleLocator;
 use BitrixIdeHelper\SourceScanner;
 use BitrixIdeHelper\StubGenerator;
+use PhpParser\Error;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -44,18 +45,18 @@ final class GenerateCommand extends Command
             if ($selected !== [] && !in_array($module->name, $selected, true)) {
                 continue;
             }
-            $count += $this->generateModule($module, $target);
+            $count += $this->generateModule($module, $target, $output);
         }
 
         $output->writeln(sprintf('<info>Generated %d stub files in %s</info>', $count, $target));
         return Command::SUCCESS;
     }
 
-    private function generateModule(Module $module, string $target): int
+    private function generateModule(Module $module, string $target, OutputInterface $output): int
     {
         $count = 0;
         foreach ($this->scanner->files($module) as $file) {
-            if ($this->scanner->symbols($file) === []) {
+            if ($this->scanner->symbols($file, $this->parseErrorReporter($output)) === []) {
                 continue;
             }
 
@@ -69,5 +70,19 @@ final class GenerateCommand extends Command
             ++$count;
         }
         return $count;
+    }
+
+    /** @return callable(string, Error): void */
+    private function parseErrorReporter(OutputInterface $output): callable
+    {
+        return static function (string $file, Error $error) use ($output): void {
+            $message = sprintf('<comment>Skipping %s: %s</comment>', $file, $error->getMessage());
+            if ($output instanceof \Symfony\Component\Console\Output\ConsoleOutputInterface) {
+                $output->getErrorOutput()->writeln($message);
+                return;
+            }
+
+            $output->writeln($message);
+        };
     }
 }

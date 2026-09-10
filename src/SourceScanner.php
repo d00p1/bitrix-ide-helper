@@ -51,8 +51,11 @@ final class SourceScanner
         return array_values(array_unique($files));
     }
 
-    /** @return list<DiscoveredSymbol> */
-    public function symbols(string $file): array
+    /**
+     * @param null|callable(string, Error): void $onParseError
+     * @return list<DiscoveredSymbol>
+     */
+    public function symbols(string $file, ?callable $onParseError = null): array
     {
         $code = file_get_contents($file);
         if ($code === false) {
@@ -62,6 +65,11 @@ final class SourceScanner
         try {
             $nodes = (new ParserFactory())->createForNewestSupportedVersion()->parse($code) ?? [];
         } catch (Error $error) {
+            if ($onParseError !== null) {
+                $onParseError($file, $error);
+                return [];
+            }
+
             throw new RuntimeException(sprintf('Unable to parse %s: %s', $file, $error->getMessage()), 0, $error);
         }
 
