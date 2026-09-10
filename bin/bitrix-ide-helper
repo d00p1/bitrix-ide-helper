@@ -1,0 +1,22 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use BitrixIdeHelper\Application;
+
+$autoloadCandidates = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+];
+
+foreach ($autoloadCandidates as $autoload) {
+    if (is_file($autoload)) {
+        require $autoload;
+        (new Application())->run();
+        exit(0);
+    }
+}
+
+fwrite(STDERR, "Composer autoloader was not found. Run composer install first.\n");
+exit(1);
