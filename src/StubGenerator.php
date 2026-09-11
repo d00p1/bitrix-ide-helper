@@ -32,10 +32,6 @@ final class StubGenerator
                     return $node;
                 }
 
-                if ($node instanceof Node\Expr\Closure || $node instanceof Node\Expr\ArrowFunction) {
-                    return NodeTraverser::REMOVE_NODE;
-                }
-
                 if ($node instanceof Node\Stmt\Expression
                     || $node instanceof Node\Stmt\If_
                     || $node instanceof Node\Stmt\For_
